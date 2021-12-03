@@ -1,0 +1,7 @@
+services:
+  wwzd_api:
+    build: src/
+    ports:
+      - 5000:5000
+    volumes:
+      - ./data:/data
