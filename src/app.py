@@ -1,14 +1,19 @@
 import pickle
-from flask import Flask
+from flask import Flask, request
 import flask
+from flask_cors import CORS
 import os
 import numpy as np
 import umap
+import cv2
 from sklearn import decomposition
 from sklearn.preprocessing import StandardScaler
 from facenet_pytorch import MTCNN, InceptionResnetV1
+from torchvision import transforms
+from werkzeug.utils import secure_filename
 
 DATA_DIR = os.environ.get('DATA_DIR')
+ALLOWED_EXTENSIONS = ['png', 'jpg', 'bmp', 'jpeg']
 
 def load_pickled_features():
   print('Loading extracted features...')
@@ -61,11 +66,42 @@ def get_tilemap_set(start, end):
   
   return tilemaps
 
+def allowed_file(filename):
+    return '.' in filename and \
+     filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def handle_file_upload():
+  if 'file' not in request.files:
+    return False
+  file = request.files['file']
+  if file.filename == '':
+    return False
+
+  if file and allowed_file(file.filename):
+    filename = secure_filename(file.filename)
+    filepath = os.path.join("/tmp", filename)
+    file.save(filepath)
+    return filepath
+  return False
+
+def extract_image_features(filepath):
+  img = cv2.imread(filepath)
+  im = np.asarray(img)
+  img_tensor = mtcnn(im)
+
+  if img_tensor is None:
+    img_tensor = transforms.ToTensor()(im)
+  
+  img_embeddings = resnet(img_tensor.unsqueeze(0))
+  return img_embeddings.detach().numpy()[0]
+
 dataset_info = calculate_dataset_metadata()
 
 isBusy = False
 
 app = Flask(__name__)
+
+CORS(app)
 
 @app.route('/status')
 def get_status():
@@ -81,18 +117,20 @@ def get_dataset_info():
 def get_tilemap(id: str):
   return flask.send_from_directory(f"{DATA_DIR}/tilemaps", path=f'tilemap-{id}.jpg', as_attachment=False)
 
-@app.get('/pca/<start>/<end>')
+@app.post('/pca/<start>/<end>')
 def get_pca_tilemap(start: str, end: str):
   global isBusy
-  # i = int(tilemap)
-  # start = i*1000
-  # if i == 202:
-  #   end = 202499
-  # else:
-  #   end = (i+1)*1000 - 1
+  filepath = handle_file_upload()
+  if not filepath:
+    return { "error": "Error during file upload" }, 400
+  
+  img_features = extract_image_features(filepath)
+  
   start_idx, end_idx = extract_image_indexes_from_tilemap_range(start, end)
   tilemaps = get_tilemap_set(start, end)
-  X = np.array(just_vectors[start_idx:end_idx])
+  features = just_vectors[start_idx:end_idx]
+  features.append(img_features)
+  X = np.array(features)
 
   X_std = StandardScaler().fit_transform(X)
 
@@ -103,24 +141,25 @@ def get_pca_tilemap(start: str, end: str):
   isBusy = False
 
   return {
-    'pca': reduced.tolist(),
+    'features': reduced.tolist(),
     'total': len(reduced),
     'tilemap_ids': tilemaps
   }
 
-@app.get('/umap/<int:start>/<int:end>')
+@app.post('/umap/<int:start>/<int:end>')
 def get_umap_tilemap(start: int, end: int):
   global isBusy
-  # i = int(tilemap)
-  # start = i*1000
-  # if i == 202:
-  #   end = 202499
-  # else:
-  #   end = (i+1)*1000 - 1
+  filepath = handle_file_upload()
+  if not filepath:
+    return { "error": "Error during file upload" }, 400
+  
+  img_features = extract_image_features(filepath)
   
   start_idx, end_idx = extract_image_indexes_from_tilemap_range(start, end)
   tilemaps = get_tilemap_set(start, end)
-  X = np.array(just_vectors[start_idx:end_idx])
+  features = just_vectors[start_idx:end_idx]
+  features.append(img_features)
+  X = np.array(features)
 
   X_std = StandardScaler().fit_transform(X)
 
@@ -131,7 +170,7 @@ def get_umap_tilemap(start: int, end: int):
   isBusy = False
 
   return {
-    'umap': reduced_umap.tolist(),
+    'features': reduced_umap.tolist(),
     'total': len(reduced_umap),
     'tilemaps': tilemaps
   }
