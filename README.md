@@ -1,17 +1,19 @@
 # WWZD API
 ## Przed uruchomieniem
-Musicie pobrać plik data.7z (link na messengerze) i wypakować go.
-Jeśli będziecie odpalać plik docker-compose.yaml, to musi znajdować się w tym samym katalogu. Jeśli ręcznie budujecie obraz i odpalacie samym dockerem, to musicie odpowiednio podać ścieżkę absolutną do folderu i zamontować w kontenerze na ścieżce ``/data``.
+~~Musicie pobrać plik data.7z (link na messengerze) i wypakować go.
+Jeśli będziecie odpalać plik docker-compose.yaml, to musi znajdować się w tym samym katalogu. Jeśli ręcznie budujecie obraz i odpalacie samym dockerem, to musicie odpowiednio podać ścieżkę absolutną do folderu i zamontować w kontenerze na ścieżce ``/data``.~~
 
-Zalecane:
+Musicie pobrać plik data.7z (link na messengerze) i wypakować go do ``src/data``.
+
+Wizualizacja:
 ```
-data/
-  pickles/
-    wwzd_not_cropped_new_cpu.pickle
-  tilemaps/
-    tilemap-000.jpg
-    ...
 src/
+  data/
+    pickles/
+      wwzd_not_cropped_new_cpu.pickle
+    tilemaps/
+      tilemap-000.jpg
+      ...
   app.py
   Dockerfile
   ...

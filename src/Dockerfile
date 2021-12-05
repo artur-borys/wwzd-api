@@ -16,12 +16,11 @@ COPY --from=python-deps /.venv /.venv
 
 ENV PATH="/.venv/bin:$PATH"
 
-VOLUME [ "/data" ]
-
 ENV DATA_DIR "/data"
 EXPOSE 5000
 
 WORKDIR /app
 COPY . /app/
+COPY ./data /data
 
 ENTRYPOINT [ "bash", "./startcontainer.sh" ]

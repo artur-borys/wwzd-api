@@ -3,7 +3,5 @@ services:
     build: src/
     ports:
       - 5000:5000
-    volumes:
-      - ./data:/data
     environment:
       PYTHONUNBUFFERED: 1
