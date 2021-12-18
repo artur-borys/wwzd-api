@@ -117,19 +117,44 @@ def get_dataset_info():
 def get_tilemap(id: str):
   return flask.send_from_directory(f"{DATA_DIR}/tilemaps", path=f'tilemap-{id}.jpg', as_attachment=False)
 
+
 @app.post('/pca/<start>/<end>')
 def get_pca_tilemap(start: str, end: str):
   global isBusy
   filepath = handle_file_upload()
   if not filepath:
-    return { "error": "Error during file upload" }, 400
-  
+    return {"error": "Error during file upload"}, 400
+
   img_features = extract_image_features(filepath)
-  
+
   start_idx, end_idx = extract_image_indexes_from_tilemap_range(start, end)
   tilemaps = get_tilemap_set(start, end)
   features = just_vectors[start_idx:end_idx]
   features.append(img_features)
+  X = np.array(features)
+
+  X_std = StandardScaler().fit_transform(X)
+
+  pca = decomposition.PCA(n_components=3)
+
+  isBusy = True
+  reduced = pca.fit_transform(X_std)
+  isBusy = False
+
+  return {
+      'features': reduced.tolist(),
+      'total': len(reduced),
+      'tilemap_ids': tilemaps
+  }
+
+@app.get('/pca/<start>/<end>/standalone')
+def get_pca_tilemap_standalone(start: str, end: str):
+  global isBusy
+  
+  start_idx, end_idx = extract_image_indexes_from_tilemap_range(start, end)
+  tilemaps = get_tilemap_set(start, end)
+  features = just_vectors[start_idx:end_idx]
+
   X = np.array(features)
 
   X_std = StandardScaler().fit_transform(X)
@@ -173,6 +198,31 @@ def get_umap_tilemap(start: int, end: int):
     'features': reduced_umap.tolist(),
     'total': len(reduced_umap),
     'tilemaps': tilemaps
+  }
+
+
+@app.get('/umap/<int:start>/<int:end>/standalone')
+def get_umap_tilemap_standalone(start: int, end: int):
+  global isBusy
+  
+  start_idx, end_idx = extract_image_indexes_from_tilemap_range(start, end)
+  tilemaps = get_tilemap_set(start, end)
+  features = just_vectors[start_idx:end_idx]
+
+  X = np.array(features)
+
+  X_std = StandardScaler().fit_transform(X)
+
+  umap_fit = umap.UMAP(n_components=3)
+
+  isBusy = True
+  reduced_umap = umap_fit.fit_transform(X_std)
+  isBusy = False
+
+  return {
+      'features': reduced_umap.tolist(),
+      'total': len(reduced_umap),
+      'tilemaps': tilemaps
   }
 
 

@@ -137,3 +137,9 @@ Przykładowa odpowiedź:
 
 ### ``POST /umap/{start}/{end}``
 Analogicznie jak dla PCA, tylko zwraca wyniki dla UMAP. To zapytanie może trwać nawet kilka minut.
+
+### ``GET /pca/{start}/{end}/standalone``
+Jak wyżej, ale bez konieczności wysyłania pliku
+
+### ``GET /umap/{start}/{end}/standalone``
+Jak wyżej, ale bez konieczności wysyłania pliku
