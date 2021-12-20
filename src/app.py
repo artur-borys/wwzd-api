@@ -55,7 +55,7 @@ def calculate_dataset_metadata():
 def extract_image_indexes_from_tilemap_range(start, end):
   first_set = f'{int(start):03d}'
   last_set = f'{int(end):03d}'
-  start_idx = dataset_info['ranges'][first_set][0]
+  start_idx = dataset_info['ranges'][first_set][0] - 1 if first_set != "000" else 0
   end_idx = dataset_info['ranges'][last_set][1]
   return start_idx,end_idx
 
