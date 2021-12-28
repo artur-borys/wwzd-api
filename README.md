@@ -10,10 +10,14 @@ Wizualizacja:
 src/
   data/
     pickles/
-      wwzd_not_cropped_new_cpu.pickle
+      celeba_features_pca_reduced.pickle
+      celeba_features_umap_reduced.pickle
     tilemaps/
       tilemap-000.jpg
       ...
+    models/
+      resnet50_celeba/
+        ...
   app.py
   Dockerfile
   ...
@@ -66,22 +70,22 @@ Zwraca status. Jeśli serwer nie jest zajęty, to zwraca HTTP 200:
 ### ``GET /dataset/info``
 Zwraca informacje o datasetcie, a konkretnie ilość zdjęć i id zakresów. Dataset jest podzielony na zakresy do 1000 zdjęć. Dla każdego takiego zakresu jest jedna tilemapa.
 
-000: 1-999
+000: 0-999
 001: 1000-1999
 002: 2000-2999
 ...
-202: 202000 - 202500
+202: 202000 - 202598
 
 Przykładowa odpowiedź:
 ``` json
 {
-  "total": 202500,
+  "total": 202599,
   "ranges": {
-    "000": [1, 999],
+    "000": [0, 999],
     "001": [1000, 1999],
     "002": [2000, 2999],
     ...
-    "202": [202000, 202500] 
+    "202": [202000, 202598] 
   }
 }
 ```
@@ -97,12 +101,10 @@ Tilemapy mają tile o rozmiarach 48x48, ale zdjęcia nie są kwadratowe, więc w
 
 Tilemapy należy odczytywać linijka po linijce, od lewej do prawej.
 
-### ``POST /pca/{start}/{end}``
-Endpoint przyjmuje parametry ``start`` i ``end``, które są początkowym i końcowym id zakresu. Czyli np. ``/pca/0/9`` zwróci nam wyniki dla zdjęć 1-9999 z datasetu + zdjęcie wysłane przez użytkownika.
+### ``GET /pca/{start}/{end}/standalone``
+Endpoint przyjmuje parametry ``start`` i ``end``, które są początkowym i końcowym id zakresu. Czyli np. ``/pca/0/9/standalone`` zwróci nam wyniki dla zdjęć 0-9999 z datasetu, a `/pca/1/1/standalone` zdjęcia 1000-1999
 
-Treścią zapytania musi być ``multipart/form-data``, a plik musi znajdować się pod kluczem ``file``. Zdjęcie nie będzie wysyłane spowrotem, jest tylko zapisywane na serwerze w katalogu ``/tmp`` na potrzeby przetwarzania. Aplikacja kliencka musi samemu wczytać zdjęcie do canvasa czy czegoś innego.
-
-Endpoint w odpowiedzi zwraca zredukowany metodą PCA wektor cech ze zbioru i zdjęcia użytkownika. Najpierw są wektory dla zdjęć z datasetu, a ostatnim elementem jest wektor dla zdjęcia przesłanego przez użytkownika.
+Endpoint w odpowiedzi zwraca zredukowany metodą PCA wektor cech ze zbioru CelebA. Najpierw są wektory dla zdjęć z datasetu
 
 Endpoint zwraca także listę id tilemapów, na którym są zdjęcia z podanych zakresów.
 
@@ -111,19 +113,19 @@ Przykładowa odpowiedź:
 {
   "features": [
     [
-      -1.4914852380752563,
-      -9.041833877563477,
-      5.840154647827148
+      142.4803009033203,
+      -1.541911244392395,
+      20.09254264831543
     ],
     [
-      9.578680038452148,
-      -1.2674076557159424,
-      5.192427158355713
+      -16.425695419311523,
+      -3.1322970390319824,
+      3.1832358837127686
     ],
     [
-      -0.7366667985916138,
-      7.462055206298828,
-      -0.23945428431034088
+      -16.069305419921875,
+      -3.0842366218566895,
+      4.038396835327148
     ],
     ...
   ],
@@ -131,15 +133,28 @@ Przykładowa odpowiedź:
     "000",
     "001"
   ],
-  "total": 1999 // 998 (000) + 1000 (001) + 1 (plik) 
+  "total": 2000
 }
 ```
 
-### ``POST /umap/{start}/{end}``
-Analogicznie jak dla PCA, tylko zwraca wyniki dla UMAP. To zapytanie może trwać nawet kilka minut.
-
-### ``GET /pca/{start}/{end}/standalone``
-Jak wyżej, ale bez konieczności wysyłania pliku
-
 ### ``GET /umap/{start}/{end}/standalone``
-Jak wyżej, ale bez konieczności wysyłania pliku
+Jak wyżej, ale dla redukcji metodą UMAP.
+
+### ``POST /dataset``
+Endpoint do wysyłania nowego datasetu.
+Treść zapytania to musi być ``form-data`` z jednym polem o nazwie ``file``, które zawiera plik ZIP.
+W tym pliku muszą znajdować się bezpośrednio w top-level zdjęcia. Serwer przetworzy pierwsze 1000 zdjęć z głównego katalogu.
+
+Serwer wypakowuje ZIP, generuje tilemapę, wyciąga i redukuje cechy obiema metodami, dlatego może to potrwać nawet kilka minut.
+
+Po zakończeniu zwraca identyfikator datasetu, np:
+```
+70207d49d53ccdca5d5dfc91d006cd09
+```
+
+### ``GET /dataset/:hash/features/:reducer``
+Zwraca zredukowany wektor cech za pomocą ``reducer`` (``pca`` lub ``umap``).
+``hash`` to wspominany wcześniej identyfikator datasetu.
+
+### ``GET /dataset/:hash/tilemap``
+Zwraca tilemapę dla datasetu o podanym id. Tilemapa ma taką samą strukturę jak dla CelebA.

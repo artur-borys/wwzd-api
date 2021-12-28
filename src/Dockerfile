@@ -23,4 +23,6 @@ WORKDIR /app
 COPY . /app/
 COPY ./data /data
 
+RUN apt update && apt install -y imagemagick
+
 ENTRYPOINT [ "bash", "./startcontainer.sh" ]
