@@ -113,12 +113,14 @@ def standardize_features(features):
   return standardizer.fit_transform(features)
 
 def reduce_features_pca(features):
-  pca = decomposition.PCA(n_components=3)
-  return pca.fit_transform(features)
+  with open(f"{DATA_DIR}/pickles/pca_model.pickle", "rb") as f:
+    pca = pickle.load(f)
+  return pca.transform(features)
 
 def reduce_features_umap(features):
-  umap_reducer = umap.UMAP(n_components=3)
-  return umap_reducer.fit_transform(features)
+  with open(f"{DATA_DIR}/pickles/umap_model.pickle", "rb") as f:
+    umap_reducer = pickle.load(f)
+  return umap_reducer.transform(features)
 
 def generate_tilemap(dataset_dir):
   IMAGES_DIR = os.path.join(dataset_dir, 'images')
